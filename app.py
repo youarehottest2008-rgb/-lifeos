@@ -1,104 +1,99 @@
 import streamlit as st
-import datetime
-import json
+import datetime, urllib.parse
 
-st.set_page_config(page_title="LifeOS", page_icon="🧠", layout="wide")
+st.set_page_config(page_title="LifeOS v2 - Real Chat", page_icon="🧠", layout="wide")
 
-# --- Custom CSS ---
-st.markdown("""
-<style>
-   .room-card {background: #0e1a14; border: 1px solid #2aff7a; border-radius: 12px; padding: 20px; margin: 10px 0;}
-   .big-title {font-size: 38px; font-weight: 800; color: white;}
-   .sub {color: #aaffaa;}
-</style>
-""", unsafe_allow_html=True)
+# --- ROOM SYSTEM ---
+query = st.query_params
+room_code = query.get("room", "MY-HOUSE")
+room_code = room_code if isinstance(room_code, str) else "MY-HOUSE"
 
-st.markdown('<div class="big-title">LifeOS</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub">Your AI Assistant For Managing Your Entire Life, Not Just Chatting — Automate • Organize • Achieve</div>', unsafe_allow_html=True)
-st.divider()
-
-# --- State ---
-if "data" not in st.session_state:
-    st.session_state.data = {
-        "Household": {"items": ["NEPA bill ₦15k - Due Oct 1", "Buy rice & stew"], "budget": 50000},
-        "Trip": {"items": ["Book Warri to Lagos bus", "Airbnb for 4"], "budget": 250000, "paid": 100000},
-        "Wedding": {"items": ["Book hall", "150 guests"], "budget": 1200000},
-        "Hustle": {"items": ["Finish LifeOS MVP", "Post TikTok"], "budget": 0},
+if "rooms" not in st.session_state:
+    st.session_state.rooms = {
+        "MY-HOUSE": {"tasks": ["NEPA bill ₦15k - Due Oct 1", "Buy rice & stew"], "chat": []},
+        "TRIP-DEC": {"tasks": ["Book Warri-Lagos bus", "Airbnb ₦100k paid"], "chat": []},
+        "WEDDING": {"tasks": ["Book hall", "150 guests"], "chat": []},
+        "HUSTLE": {"tasks": ["Post TikTok today"], "chat": []},
     }
 
-tabs = st.tabs(["🏠 Household Room", "✈️ Trip Room", "💒 Wedding Room", "📚 Hustle Room", "🤖 LifeOS AI"])
+# Ensure current room exists
+if room_code not in st.session_state.rooms:
+    st.session_state.rooms[room_code] = {"tasks": [], "chat": []}
 
-# --- ROOM 1 ---
-with tabs[0]:
-    col1, col2 = st.columns([2,1])
-    with col1:
-        st.subheader("Household Room")
-        st.caption("Bills • Shopping • Chores — Shared with family")
-        new = st.text_input("Add bill/task", placeholder="e.g. Pay rent 300k", key="h_in")
-        if st.button("Add", key="h_btn") and new:
-            st.session_state.data["Household"]["items"].append(new)
-            st.toast("Added to Household!")
-        for i, item in enumerate(st.session_state.data["Household"]["items"]):
-            st.checkbox(item, key=f"h_{i}")
-    with col2:
-        st.markdown('<div class="room-card">3 tasks due today • Synced<br><br>💰 Monthly: ₦45k spent<br>🔔 AI: 2 bills due in 3 days</div>', unsafe_allow_html=True)
-        st.text_input("Invite Link", value="lifeos.app/join/household-warri123", disabled=True)
-        st.button("📋 Copy Invite Link", key="copy_h")
+st.markdown(f"# 🧠 LifeOS v2 — Room: `{room_code}`")
+st.caption(f"Share this link, una go dey same Room + chat live!")
 
-# --- ROOM 2 ---
-with tabs[1]:
-    col1, col2 = st.columns([2,1])
-    with col1:
-        st.subheader("Trip Room - Detty December Lagos")
-        st.caption("Budget • Itinerary • Tickets")
-        budget = st.session_state.data["Trip"]["budget"]
-        paid = st.session_state.data["Trip"]["paid"]
-        st.progress(paid/budget)
-        st.write(f"**₦{paid:,} paid / ₦{budget:,} total** — 2 friends never pay")
-        new = st.text_input("Add trip task", placeholder="e.g. Buy beach outfit", key="t_in")
-        if st.button("Add to Trip", key="t_btn") and new:
-            st.session_state.data["Trip"]["items"].append(new)
-        for item in st.session_state.data["Trip"]["items"]:
-            st.checkbox(item, key=f"t_{item}")
-    with col2:
-        st.markdown('<div class="room-card">✈️ Japan trip • 5 days • On track<br><br>👥 Allen, Emeka, Tega, Jane<br>💸 You owe: ₦30k</div>', unsafe_allow_html=True)
-        st.button("👥 Invite Friends", key="copy_t", use_container_width=True)
-        st.button("💸 Remind Owing Friends (AI)", key="remind", use_container_width=True)
+# Invite Link
+base_url = "https://lifeos.streamlit.app"
+invite_link = f"{base_url}/?room={room_code}"
+st.code(invite_link, language=None)
+wa_text = urllib.parse.quote(f"Join my LifeOS Room {room_code}: {invite_link}")
+st.link_button("📲 Share Invite on WhatsApp", f"https://wa.me/?text={wa_text}")
 
-# --- ROOM 3 & 4 ---
-with tabs[2]:
-    st.subheader("Wedding Room")
-    st.metric("Guests", "150", "12 confirmed today")
-    st.metric("Budget Tracked", "₦1.2M", "₦200k left")
-    st.info("AI: Vendor 'DJ Warri' never confirm. Make I remind am?")
+st.divider()
+room_names = list(st.session_state.rooms.keys())
+selected = st.selectbox("Switch Room", room_names, index=room_names.index(room_code) if room_code in room_names else 0)
 
-with tabs[3]:
-    st.subheader("Student/Hustle Room")
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Goals", "3 Active", "1 Completed")
-    c2.metric("Earnings", "₦85k", "This month ↑")
-    c3.metric("Deadlines", "2 Due", "Tomorrow")
+# If switched, update URL
+if selected!= room_code:
+    st.query_params["room"] = selected
+    st.rerun()
 
-# --- AI CHAT ---
-with tabs[4]:
-    st.subheader("Ask LifeOS")
-    st.caption("One AI wey know everything about your Rooms")
-    prompt = st.chat_input("Ask: Pay my NEPA & plan weekend trip...")
-    if prompt:
-        with st.chat_message("user"):
-            st.write(prompt)
-        with st.chat_message("assistant"):
-            st.success(f"Done! ✅\n\nI understood: '{prompt}'\n\n- Added to Household Room\n- Set reminder for {datetime.date.today() + datetime.timedelta(days=2)}\n- Notified everyone in that Room\n\nWetin next?")
-    else:
-        st.markdown("Try: `How much remain for our trip?` / `Remind us to pay rent` / `Summarize my week`")
+current = st.session_state.rooms[selected]
 
-# --- Sidebar Monetize ---
+# --- TABS ---
+tab1, tab2 = st.tabs(["✅ Tasks", "💬 Family Chat"])
+
+with tab1:
+    st.subheader(f"Tasks for {selected}")
+    new_task = st.text_input("Add new task/bill", key="task_input")
+    if st.button("Add Task"):
+        if new_task:
+            current["tasks"].append(new_task)
+            st.success("Added!")
+            st.rerun()
+    for i, t in enumerate(current["tasks"]):
+        col1, col2 = st.columns([4,1])
+        col1.checkbox(t, key=f"{selected}_task_{i}")
+        if col2.button("❌", key=f"del_{selected}_{i}"):
+            current["tasks"].pop(i)
+            st.rerun()
+
+with tab2:
+    st.subheader(f"Live Chat - {selected}")
+    st.caption("Type here, your family go see am when they refresh (V3 go be instant)")
+    for msg in current["chat"]:
+        with st.chat_message(msg["role"]):
+            st.write(f"**{msg['user']}:** {msg['text']} \n_{msg['time']}_")
+
+    user_name = st.text_input("Your name", value="You", key="chat_name")
+    chat_input = st.chat_input("Type message...")
+    if chat_input:
+        current["chat"].append({
+            "user": user_name,
+            "role": "user",
+            "text": chat_input,
+            "time": datetime.datetime.now().strftime("%H:%M")
+        })
+        # Simple AI auto-reply if they ask
+        if "remind" in chat_input.lower() or "add" in chat_input.lower():
+            current["chat"].append({
+                "user": "LifeOS AI",
+                "role": "assistant",
+                "text": f"Got it! I added '{chat_input}' to tasks.",
+                "time": datetime.datetime.now().strftime("%H:%M")
+            })
+            current["tasks"].append(chat_input)
+        st.rerun()
+
 with st.sidebar:
-    st.markdown("### LifeOS Premium")
-    st.write("Unlock Forever")
-    st.markdown("## ₦5,000")
-    st.write("✅ Unlimited Rooms\n✅ AI Budgeting\n✅ Document Scanner\n✅ Invite Unlimited People")
-    st.text_input("Palmpay Number", "9029508840", disabled=True)
-    st.button("I Don Pay - Unlock", type="primary", use_container_width=True)
+    st.markdown("### Create New Room")
+    new_room = st.text_input("New Room code e.g. OKPE-HOUSE")
+    if st.button("Create Room") and new_room:
+        st.session_state.rooms[new_room.upper()] = {"tasks": [], "chat": []}
+        st.query_params["room"] = new_room.upper()
+        st.rerun()
     st.divider()
-    st.caption("Built for Warri Hustlers • Sell Faster. Earn More. Rest Well.")
+    st.markdown("### Premium ₦5k")
+    st.write("Palmpay: 9029508840")
+    st.button("Unlock Premium", type="primary", use_container_width=True)
