@@ -1,5 +1,3 @@
-# -lifeos
-    LifeOS - Your AI Assistant For Managing Your Entire Life
 import streamlit as st
 import datetime
 import json
